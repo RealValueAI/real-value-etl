@@ -42,11 +42,11 @@ CH_FIELD_MAPPING = {
     'area_rooms': 'area_rooms',
     'previous_price': 'previous_price',
     'renovation_offer': 'renovation_offer',
-    'subway_time': 'subway_time',
     'balcony_type': 'balcony_type',
     'window_view': 'window_view',
     'built_year_offer': 'built_year_offer',
     'building_state': 'building_state',
     'type_house_offer': 'type_house_offer',
     'valid': 'valid',
+    'subway_time': 'subway_time',
 }

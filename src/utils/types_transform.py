@@ -58,7 +58,7 @@ def transform_to_clickhouse_schema(df: pd.DataFrame) -> pd.DataFrame:
     df['area_rooms'] = df['area_rooms'].fillna(0).astype(np.float64)
     df['previous_price'] = df['previous_price'].fillna(0).astype(np.float64)
     df['renovation_offer'] = df['renovation_offer'].fillna('UNKNOWN').astype(str)
-    # df['subway_time'] = df['subway_time']
+
     df['balcony_type'] = df['balcony_type'].fillna('UNKNOWN').astype(
         'category'
     )
@@ -71,18 +71,20 @@ def transform_to_clickhouse_schema(df: pd.DataFrame) -> pd.DataFrame:
         'category'
     )
 
+    df['subway_time'] = df['subway_time'].astype(str)
+
     def generate_clickhouse_uuid(row):
         unique_string = f"{row['listing_id']}_{row['platform_id']}"
         return str(uuid.uuid5(uuid.NAMESPACE_DNS, unique_string))
     df['uid'] = df.apply(generate_clickhouse_uuid, axis=1)
 
-    df.drop(
-        columns=[
-            'subway_time',
-    #         'big_card',
-    #         'pin_color',
-         ],
-         inplace=True,
-    )
+    # df.drop(
+    #     columns=[
+    #         'subway_time',
+    # #         'big_card',
+    # #         'pin_color',
+    #      ],
+    #      inplace=True,
+    # )
     df.to_csv('merged.csv')
     return df

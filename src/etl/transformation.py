@@ -1,3 +1,4 @@
+import json
 import re
 import time
 import uuid
@@ -342,6 +343,7 @@ class YandexTransformer(BaseTransformer):
             },
             axis=1
         )
+        combined_df['subway_time'] = combined_df['subway_time'].apply(lambda x: json.dumps(x, ensure_ascii=False))
         # combined_df['balcony_type']
         # combined_df['window_view']
         # combined_df['built_year_offer']
@@ -530,6 +532,7 @@ class AvitoTransformer(BaseTransformer):
         df_trans.dropna(subset=['Price', 'Area', 'Rooms', 'Address'],
                         inplace=True)
 
+        df_trans['subway_time'] = np.nan
         self.logger.info("Avito Transformation complete.")
         return df_trans
 
