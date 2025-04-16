@@ -1,0 +1,72 @@
+- dwh_uid            UInt64,  -- Системный идентификатор записи в DWH
+-    uid                UUID,    -- Уникальный идентификатор записи (отличный от listing_id)
+-   listing_id         UInt64,  -- Уникальный идентификатор объявления (Object ID)
+-   listing_url        String,  -- URL объявления
+-   platform_id        UInt8,   -- Идентификатор платформы (например, Avito, 
+    DomClick и т.д.)
+-   price              Decimal(18,2),  -- Цена объекта недвижимости
+-   price_per_sqm      Decimal(18,2),  -- Цена за квадратный метр
+-   mortgage_rate      Float32, -- Ставка ипотеки
+-   monthly_payment    Decimal(18,2),  -- Ежемесячный платеж
+-   advance_payment    Decimal(18,2),  -- Авансовый платеж
+-   address            String,  -- Адрес объекта
+-   address_id         UInt64,  -- Идентификатор адреса
+-   area               Float64, -- Общая площадь
+-   rooms              UInt8,   -- Количество комнат
+-   floor              UInt8,   -- Этаж объекта
+-   description        String,  -- Описание
+-  published_date     DateTime, -- Дата публикации
+-  updated_date       DateTime, -- Дата обновления
+-  created_at         DateTime, -- Время создания записи
+-  seller_id          UInt64,  -- Идентификатор продавца
+-  seller_name_hash   String,  -- Хэш имени продавца (может быть не задан)
+-  seller_type        Enum8('AGENT' = 5, 'AGENCY' = 2, 'DEVELOPER' = 1, 'OWNER' = 3, 
+   'UNKNOWN' = 6, 'PRIVATE_AGENT' = 4),
+                               -- Тип продавца
+-  company_name       String,  -- Название компании (опционально)
+-  company_id         UInt64,  -- Идентификатор компании
+-  property_type      Enum8('layout' = 2, 'townhouse' = 5, 'Unknown' = 6, 'house' = 
+   3, 'flat' = 1, 'room' = 4),
+                               -- Тип недвижимости
+-  category           Enum8('Unknown' = 2, 'living' = 1),  -- Категория недвижимости
+-  house_floors       UInt8,   -- Количество этажей в доме
+-  deal_type          Enum8('sale' = 2, 'lease' = 3, 'Unknown' = 1, 'rent' = 4),
+                               -- Тип сделки (продажа, аренда и т.п.)
+-  discount_status    Enum8('Active' = 3, 'Expired' = 4, 'Unknown' = 1, 'None' = 2, 
+   'discount_received' = 5),
+                               -- Статус скидки
+-  discount_value     Float64, -- Значение скидки
+-  placement_paid     UInt8,   -- Флаг платного размещения
+-  big_card           UInt8,   -- Флаг большого карточного размещения
+-  pin_color          UInt8,   -- Цветной пин (представленный числовым значением)
+-  longitude          Float64, -- Долгота
+-  latitude           Float64, -- Широта
+-  subway_distances   Array(Float64),
+                               -- Массив расстояний до ближайших станций метро
+-  subway_names       Array(String),
+                               -- Массив названий станций метро
+-  photo_urls         Array(String),
+                               -- Ссылки на фотографии объекта
+-  auction_status     Float64, -- Статус аукциона (представленный числовым значением)
+-  flat_type          Enum8('SECONDARY' = 1, 'NEW_FLAT' = 2, 'UNKNOWN' = 4, 
+   'NEW_SECONDARY' = 3),
+                               -- Тип квартиры
+-  height             Float64, -- Высота (например, потолков или объекта)
+-  area_rooms         Float64, -- Площадь, относящаяся к комнатам
+-  previous_price     Float64, -- Предыдущая цена
+-  renovation_offer   String,  -- Предложение по ремонту
+-  balcony_type       Enum8('BALCONY' = 1, 'LOGGIA' = 2, 'BALCONY__LOGGIA' = 4, 
+   'TWO_BALCONY' = 5, 'UNKNOWN' = 6, 'TWO_LOGGIA' = 3),
+                               -- Тип балкона
+-  window_view        Enum8('YARD' = 1, 'YARD_STREET' = 2, 'STREET' = 3, 'UNKNOWN' = 4),
+                               -- Вид из окна
+-  built_year_offer   UInt8,   -- Год постройки 
+-  building_state     Enum8('UNFINISHED' = 1, 'HAND_OVER' = 2, 'UNKNOWN' = 3),
+                               -- Состояние здания
+-  valid              Int8,    -- Флаг валидности записи (1 - максимально валидна, 0 - 
+   не проверялась, -1 - невалидна)
+-  predicted_price    Float64, -- Предсказанная цена
+-  flat_rating        Float64, -- Рейтинг квартиры от 1 до 10
+-  house_rating       Float64, -- Рейтинг дома от 1 до 10
+-  location_rating    Float64, -- Рейтинг локации от 1 до 10
+-  group_id           UInt32   -- Идентификатор группы 

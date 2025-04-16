@@ -1,10 +1,13 @@
 import re
 import time
 import uuid
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 import requests
+
+from src.etl.extraction import BaseExtractor
 from src.utils.logger import get_logger
 
 
@@ -173,6 +176,7 @@ class DomClickTransformer(BaseTransformer):
         combined_df['built_year_offer'] = np.nan
         combined_df['building_state'] = np.nan
         combined_df['type_house_offer'] = np.nan
+        combined_df['valid'] = 0
 
         self.logger.info("DomClick Transformation complete.")
         return combined_df
@@ -343,7 +347,7 @@ class YandexTransformer(BaseTransformer):
         # combined_df['built_year_offer']
         # combined_df['building_state']
         # combined_df['type_house_offer']
-
+        combined_df['valid'] = 0
 
         self.logger.info("Yandex Transformation complete.")
         return combined_df
@@ -375,3 +379,165 @@ class YandexTransformer(BaseTransformer):
             self.logger.error(
                 f"Error extracting Object ID from URL {url}: {e}"
             )
+
+
+class AvitoTransformer(BaseTransformer):
+    def __init__(self):
+        self.logger = get_logger('avito_transformer_logger')
+        self.logger.info("AvitoTransformer initialized.")
+
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        df_trans = df.copy()
+
+        # Пропускаем дубликаты по URL (если есть)
+        df_trans.drop_duplicates(subset=['url_offer'], keep='first', inplace=True)
+        self.logger.info("Duplicates dropped.")
+
+        # listing_id – берем из id_offer (приводим к целому)
+        df_trans['Object ID'] = pd.to_numeric(df_trans['id_offer'], errors='coerce').astype('Int64')
+
+        # listing_url – берем из url_offer
+        df_trans['listing_url'] = df_trans['url_offer']
+
+        # Цена – price_offer, приводим к числовому
+        df_trans['Price'] = df_trans['price_offer']
+
+        # Price per sqm – вычисляем как price / square_total_offer (если площадь > 0)
+        df_trans['Price_per_sqm'] = df_trans.apply(
+            lambda row: row['Price'] / pd.to_numeric(row[
+                                                         'square_total_offer'], errors='coerce')
+            if pd.notnull(row['square_total_offer']) and float(row['square_total_offer']) > 0 else np.nan,
+            axis=1
+        )
+
+        df_trans['Mortgage Rate'] = np.nan
+        df_trans['Address'] = df_trans['address_offer'].fillna('').astype(
+            'string')
+        df_trans['Address_id'] = df_trans['Address'].apply(lambda x: abs(
+            hash(x)) % (10 ** 10))
+        df_trans['Area'] = pd.to_numeric(df_trans['square_total_offer'],
+                                         errors='coerce')
+        df_trans['Rooms'] = pd.to_numeric(df_trans['rooms_offer'],
+                                          errors='coerce')
+        df_trans['Floor'] = pd.to_numeric(df_trans['floor_offer'],
+                                          errors='coerce').astype('Int64')
+        df_trans['Description'] = df_trans['description_offer'].fillna(
+            '').astype('string')
+        df_trans['Published Date'] = pd.to_datetime(df_trans['date_offer'], errors='coerce', utc=True)
+        df_trans['Published Date'] = df_trans['Published Date'].dt.tz_localize(None)
+        df_trans['Published Date'] = df_trans['Published Date'].fillna(pd.Timestamp('1970-01-01 00:00:00'))
+        df_trans['Published Date'] = df_trans['Published Date'].dt.floor('s')
+        df_trans['Updated Date'] = df_trans['Published Date']
+
+        # Seller поля: используем seller
+        df_trans['Seller ID'] = np.nan
+        df_trans['Seller Name Hash'] = np.nan
+        df_trans['Company Name'] = np.nan
+        df_trans['Company ID'] = np.nan
+
+        # Property Type – из type_offer, приводим к нижнему регистру (например, flat, etc.)
+        df_trans['Property Type'] = df_trans['type_offer'].str.lower().fillna('unknown')
+
+        # Category – задаём статически
+        df_trans['Category'] = 'living'
+
+        # House Floors – из floors_house
+        df_trans['House Floors'] = pd.to_numeric(df_trans['floors_house'], errors='coerce').astype('Int64')
+
+        # Deal Type – из sdelka_offer (например, sale, rent)
+        df_trans['Deal Type'] = df_trans['sdelka_offer'].str.lower().fillna('sale')
+
+        # Discount Status и Discount Value – отсутствуют, задаём NaN и 0
+        df_trans['Discount Status'] = np.nan
+        df_trans['Discount Value'] = 0
+
+        # Placement Paid, Big Card, Pin Color – отсутствуют, задаём как 0 (false)
+        df_trans['Placement Paid'] = 0
+        df_trans['Big Card'] = 0
+        df_trans['Pin Color'] = 0
+
+        # Гео координаты – из latitude и longitude
+        df_trans['Latitude'] = pd.to_numeric(df_trans['latitude'], errors='coerce')
+        df_trans['Longitude'] = pd.to_numeric(df_trans['longitude'], errors='coerce')
+
+        # Обработка метро:
+        # subway_names – берем из metro_name1, metro_name2, metro_name3, отфильтровывая пустые значения
+        df_trans['Subway Names'] = df_trans.apply(
+            lambda row: [name for name in [row.get('metro_name1'), row.get('metro_name2'), row.get('metro_name3')]
+                         if pd.notnull(name) and str(name).strip() != ''], axis=1
+        )
+        # subway_distances – берем из distance_to_metro1, distance_to_metro2, distance_to_metro3
+        df_trans['Subway Distances'] = df_trans.apply(
+            lambda row: [float(row.get('distance_to_metro1')) if pd.notnull(row.get('distance_to_metro1')) else np.nan,
+                         float(row.get('distance_to_metro2')) if pd.notnull(row.get('distance_to_metro2')) else np.nan,
+                         float(row.get('distance_to_metro3')) if pd.notnull(row.get('distance_to_metro3')) else np.nan],
+            axis=1
+        )
+        # Можно отфильтровать NaN значения, если необходимо:
+        df_trans['Subway Distances'] = df_trans['Subway Distances'].apply(
+            lambda lst: [x for x in lst if not pd.isna(x)]
+        )
+
+        # Photos URLs – из photo_list_offer; используем _safe_eval для преобразования строки в список
+        df_trans['Photos URLs'] = df_trans['photo_list_offer'].apply(self._safe_eval)
+
+        df_trans['Monthly Payment'] = np.nan
+        df_trans['Advance Payment'] = 0
+        df_trans['Auction Status'] = np.nan
+        df_trans['uid'] = np.nan
+
+        # platform_id – задаём для Avito 2
+        df_trans['platform_id'] = 2
+
+        # created_at – текущая дата и время
+        now = pd.Timestamp.now()
+        df_trans['created_at'] = now
+
+        # seller_type – из developer_offer, если имеется, иначе из seller; приводим к верхнему регистру
+        df_trans['seller_type'] = df_trans['developer_offer'].fillna(df_trans['seller']).str.upper()
+
+        # flat_type – из type_offer
+        df_trans['flat_type'] = df_trans['type_offer'].str.lower()
+
+        # height – из height_offer
+        df_trans['height'] = pd.to_numeric(df_trans['height_offer'], errors='coerce')
+
+        # area_rooms – из square_rooms_offer
+        df_trans['area_rooms'] = pd.to_numeric(df_trans['square_rooms_offer'], errors='coerce')
+
+        # previous_price – отсутствует, оставляем NaN
+        df_trans['previous_price'] = np.nan
+
+        # renovation_offer – из renovation_offer
+        df_trans['renovation_offer'] = df_trans['renovation_offer'].fillna('')
+
+        # balcony_type – из balcony_type
+        df_trans['balcony_type'] = 'UNKNOWN'
+
+        # window_view – из window_view
+        df_trans['window_view'] = 'UNKNOWN'
+
+        # built_year_offer – из built_year_offer
+        df_trans['built_year_offer'] = pd.to_numeric(df_trans['built_year_offer'], errors='coerce').astype('Int64')
+
+        # building_state – отсутствует
+        df_trans['building_state'] = 'UNKNOWN'
+
+        # type_house_offer – из type_house_offer
+        df_trans['type_house_offer'] = df_trans['type_house_offer'].fillna('')
+        df_trans['valid'] = 0
+        # Удаляем строки, где критически важные поля отсутствуют
+        df_trans.dropna(subset=['Price', 'Area', 'Rooms', 'Address'],
+                        inplace=True)
+
+        self.logger.info("Avito Transformation complete.")
+        return df_trans
+
+    def _safe_eval(self, value: str):
+        try:
+            if isinstance(value, str) and value.strip().startswith('['):
+                return eval(value)
+            return []
+        except Exception as e:
+            self.logger.error(f"Error during eval: {e}")
+            return []

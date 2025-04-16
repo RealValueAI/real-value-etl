@@ -32,7 +32,7 @@ class ClickHouseConfig:
     user: str = os.getenv("CLICKHOUSE_USER")
     password: str = os.getenv("CLICKHOUSE_PASSWORD")
     database: str = os.getenv("CLICKHOUSE_DATABASE")
-    table_name: str = 'listings_ml_vitrine'
+    table_name: str = 'listings_actual'
 
 
 s3_config = S3Config()

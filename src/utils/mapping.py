@@ -48,4 +48,5 @@ CH_FIELD_MAPPING = {
     'built_year_offer': 'built_year_offer',
     'building_state': 'building_state',
     'type_house_offer': 'type_house_offer',
+    'valid': 'valid',
 }

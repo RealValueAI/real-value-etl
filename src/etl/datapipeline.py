@@ -2,10 +2,12 @@ from typing import Dict, Literal, Optional
 
 import pandas as pd
 
-from src.etl.extraction import DomClickExtractor, S3Extractor, YandexExtractor
+from src.etl.extraction import AvitoExtractor, CianExtractor, \
+    DomClickExtractor, S3Extractor, \
+    YandexExtractor
 from src.etl.merging import UnifiedDataMerger
 from src.etl.transformation import (
-    BaseTransformer,
+    AvitoTransformer, BaseTransformer,
     DomClickTransformer,
     YandexTransformer,
 )
@@ -34,8 +36,8 @@ class DataPipeline:
         self.extractors = {
             "domclick": DomClickExtractor(self.s3_config),
             "yandex": YandexExtractor(self.s3_config),
-            "cian": S3Extractor(self.s3_config),
-            "avito": S3Extractor(self.s3_config),
+            "cian": CianExtractor(self.s3_config),
+            "avito": AvitoExtractor(self.s3_config),
         }
 
         # Трансформеры для всех платформ
@@ -43,7 +45,7 @@ class DataPipeline:
             "domclick": DomClickTransformer(),
             "yandex": YandexTransformer(),
             "cian": BaseTransformer(),
-            "avito": BaseTransformer(),
+            "avito": AvitoTransformer(),
         }
 
         # Мерджер под формат dwh
@@ -89,11 +91,19 @@ class DataPipeline:
                         )
         elif mode == 'test':
             dataframes['domclick'] = pd.read_csv(
-                'C:\\Users\\serga\\Downloads\\domclick_20241214.csv',
+                'output/domclick_20241214.csv',
                 nrows=5000
             )
             dataframes['yandex'] = pd.read_csv(
-                'C:\\Users\\serga\\Downloads\\yandex_20241208.csv',
+                'output/yandex_20241208.csv',
+                nrows=5000
+            )
+            dataframes['avito'] = pd.read_csv(
+                'output/avito_20250319.csv',
+                nrows=5000
+            )
+            dataframes['cian'] = pd.read_csv(
+                'output/cian_20241107.csv',
                 nrows=5000
             )
         if not dataframes:

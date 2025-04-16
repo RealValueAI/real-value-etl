@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  etl-service:
+    build: .
+    container_name: etl_service
+    ports:
+      - "8100:8100"
+    environment:
+      - SOME_ENV_VAR=${SOME_ENV_VAR}
+    volumes:
+      - ./logs:/app/logs
+    restart: always
